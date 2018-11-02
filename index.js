@@ -50,7 +50,7 @@ const fetchStatus = () => {
 
       const { status, id: workflowId } = targetBranch.latest_workflows[
         firstWorkflow
-      ].status;
+      ];
 
       const msg = branchName + ": " + status;
 

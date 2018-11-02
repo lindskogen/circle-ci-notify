@@ -1,0 +1,10 @@
+{
+  "name": "circle-ci-notify",
+  "license": "MIT",
+  "author": "Johan Lindskogen <johan@lindskogen.se>",
+  "version": "1.0.1",
+  "bin": "./index.js",
+  "dependencies": {
+    "node-fetch": "^2.2.0"
+  }
+}

@@ -2,7 +2,7 @@
   "name": "circle-ci-notify",
   "license": "MIT",
   "author": "Johan Lindskogen <johan@lindskogen.se>",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "bin": "./index.js",
   "dependencies": {
     "lodash": "^4.17.15",

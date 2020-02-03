@@ -1,5 +1,6 @@
 #! /usr/bin/env node
 const fetch = require("node-fetch");
+const _ = require("lodash");
 
 const notify = (status, shouldNotify = true) =>
   console.log(status, shouldNotify ? "\u0007" : "");
@@ -18,56 +19,56 @@ if (!userToken) {
 const url = "https://circleci.com/api/v1/projects?shallow=true";
 let shouldNotify = false;
 
-const fetchStatus = () => {
-  return fetch(url, {
+const fetchStatus = async () => {
+  const projects = await fetch(url, {
     headers: {
       Authorization: "Basic " + Buffer.from(userToken + ":").toString("base64")
     }
-  })
-    .then(r => r.json())
-    .then(projects => {
-      const targetProject = projects.find(
-        p =>
-          p.username.toLowerCase() === username &&
-          p.reponame.toLowerCase() === reponame
+  }).then(r => r.json());
+
+  const targetProject = projects.find(
+    p =>
+      p.username.toLowerCase() === username &&
+      p.reponame.toLowerCase() === reponame
+  );
+
+  if (!targetProject) {
+    throw new Error(`No project found for ${username}/${reponame}`);
+  }
+
+  const targetBranch = targetProject.branches[encodedBranchName];
+
+  if (!targetBranch) {
+    throw new Error(
+      `No branch found in ${username}/${reponame} for ${branchName}`
+    );
+  }
+
+  const [firstWorkflow] = _.orderBy(
+    _.entries(targetBranch.latest_workflows),
+    [a => a[1].created_at],
+    ["desc"]
+  ).filter(k => k[0] !== "Build%20Error")[0];
+
+  const { status, id: workflowId } = targetBranch.latest_workflows[
+    firstWorkflow
+  ];
+
+  const msg = branchName + ": " + status;
+
+  if (status == "running") {
+    shouldNotify = true;
+    notify(msg, false);
+    setTimeout(fetchStatus, 5 * 1000);
+  } else {
+    notify(msg, shouldNotify);
+    if (status !== "success") {
+      console.log(
+        `For details see: https://circleci.com/workflow-run/${workflowId}`
       );
-
-      if (!targetProject) {
-        throw new Error(`No project found for ${username}/${reponame}`);
-      }
-
-      const targetBranch = targetProject.branches[encodedBranchName];
-
-      if (!targetBranch) {
-        throw new Error(
-          `No branch found in ${username}/${reponame} for ${branchName}`
-        );
-      }
-
-      const firstWorkflow = Object.keys(targetBranch.latest_workflows).filter(
-        k => k !== "config-errors"
-      )[0];
-
-      const { status, id: workflowId } = targetBranch.latest_workflows[
-        firstWorkflow
-      ];
-
-      const msg = branchName + ": " + status;
-
-      if (status == "running") {
-        shouldNotify = true;
-        notify(msg, false);
-        setTimeout(fetchStatus, 5 * 1000);
-      } else {
-        notify(msg, shouldNotify);
-        if (status !== "success") {
-          console.log(
-            `For details see: https://circleci.com/workflow-run/${workflowId}`
-          );
-          process.exit(1);
-        }
-      }
-    });
+      process.exit(1);
+    }
+  }
 };
 
 fetchStatus().catch(e => console.log(e.message));
